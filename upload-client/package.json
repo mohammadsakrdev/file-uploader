@@ -1,0 +1,22 @@
+{
+  "name": "upload-client",
+  "version": "1.0.0",
+  "description": "Client app for file upload",
+  "main": "app.js",
+  "scripts": {
+    "test": "mocha ./src/**/*.test.js",
+    "start": "nodemon app.js"
+  },
+  "author": "Mohammad Sakr",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.19.0",
+    "chokidar": "^3.0.2",
+    "dotenv": "^8.1.0",
+    "form-data": "^2.5.1",
+    "node-cron": "^2.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.1"
+  }
+}
