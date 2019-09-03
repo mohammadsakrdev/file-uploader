@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test": "mocha ./src/**/*.test.js",
-    "start": "nodemon app.js"
+    "start": "nodemon cron-app.js"
   },
   "author": "Mohammad Sakr",
   "license": "ISC",
