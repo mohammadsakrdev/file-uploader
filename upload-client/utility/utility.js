@@ -5,13 +5,32 @@ const path = require('path');
 const FormData = require('form-data');
 const axios = require('axios');
 /**
+ * Function to get file names
+ *
+ * @function
+ *
+ * @return {Array<Object>}
+ */
+exports.getFiles = async () => {
+  try {
+    const filesPaths = {};
+    filesPaths.old = await readDirectory(process.env.OLD_LOGS_PATH);
+    filesPaths.live = await readDirectory(process.env.LIVE_LOGS_PATH);
+    filesPaths.test = await readDirectory(process.env.TEST_LOGS_PATH);
+    return filesPaths;
+  } catch (err) {
+    console.error('@GetFiles', { err });
+  }
+};
+
+/**
  * Function to upload files from one folder to another one
  *
  * @function
  *
  * @return {undefined}
  */
-module.exports = async (directoryPath, api_uri) => {
+exports.moveFiles = async (directoryPath, api_uri) => {
   try {
     const files = await readDirectory(directoryPath);
     console.log(files.length);
@@ -30,6 +49,8 @@ module.exports = async (directoryPath, api_uri) => {
         }
       });
       if (numOfValidFiles > 0) {
+        followRedirects.maxRedirects = 10;
+        followRedirects.maxBodyLength = 500 * 1024 * 1024 * 1024;
         const response = await axios.post(api_uri, form, {
           headers: {
             'Content-Type': `multipart/form-data; boundary=${form._boundary}`,

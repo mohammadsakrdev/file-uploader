@@ -5,15 +5,20 @@
   "main": "app.js",
   "scripts": {
     "test": "mocha ./src/**/*.test.js",
-    "start": "nodemon cron-app.js"
+    "start": "nodemon app.js"
   },
   "author": "Mohammad Sakr",
   "license": "ISC",
   "dependencies": {
     "axios": "^0.19.0",
+    "body-parser": "^1.19.0",
     "chokidar": "^3.0.2",
+    "cors": "^2.8.5",
     "dotenv": "^8.1.0",
+    "express": "^4.17.1",
     "form-data": "^2.5.1",
+    "helmet": "^3.20.1",
+    "morgan": "^1.9.1",
     "node-cron": "^2.0.3"
   },
   "devDependencies": {

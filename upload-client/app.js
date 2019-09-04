@@ -1,62 +1,67 @@
 require('dotenv').config();
-const { promisify } = require('util');
-const {
-  readdir,
-  createReadStream,
-  unlink,
-  readFile,
-  readFileSync
-} = require('fs');
-const readDirectory = promisify(readdir);
-const path = require('path');
-const FormData = require('form-data');
-const axios = require('axios');
-const cron = require('node-cron');
-const api_uri = `${process.env.BASE_API_URL}api/upload`;
+const express = require('express');
+var bodyParser = require('body-parser').json({ extended: true });
+const helmet = require('helmet');
+const cors = require('cors');
+const morgan = require('morgan');
+const scheduler = require('./cron-app.js');
+path = require('path');
 
-readDirectory(process.env.DIRECTORY_TO_LISTEN).then(files => {
-  if (files.length > 0) {
-    let numOfValidFiles = 0;
-    const form = new FormData();
-    files.forEach(element => {
-      const elementPath = path.join(process.env.DIRECTORY_TO_LISTEN, element);
-      const contents = readFileSync(elementPath, 'utf8');
-      if (contents) {
-        form.append(element, createReadStream(elementPath));
-        numOfValidFiles++;
-        console.log(numOfValidFiles);
-      }
-    });
-    if (numOfValidFiles > 0) {
-      axios
-        .post(api_uri, form, {
-          headers: {
-            'Content-Type': `multipart/form-data; boundary=${form._boundary}`,
-            'Upload-Auth': process.env.SECRET_KEY.toString()
-          }
-        })
-        .then(response => {
-          console.log('@Response', response.status);
-          console.log('@Response', response.data.files);
-          if (response.status === 200) {
-            files.forEach(f => {
-              unlink(path.join(process.env.DIRECTORY_TO_LISTEN, f), err => {
-                if (err) {
-                  console.error(err);
-                  return;
-                }
-                console.log(`File ${f} is deleted`);
-              });
-            });
-          }
-        })
-        .catch(err => {
-          console.log('@Error', err);
-        });
-    } else {
-      console.log('Number of valid files is zero');
-    }
-  } else {
-    console.log('No files to be transferred');
-  }
+const app = express();
+
+// default options
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser);
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Accept');
+  res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
+  next();
+});
+app.use(cors());
+app.use(helmet.frameguard());
+app.use(helmet.xssFilter());
+app.use(helmet.noSniff());
+app.use(helmet.ieNoOpen());
+app.use(
+  helmet.hsts({
+    maxAge: 6 * 30 * 24 * 60 * 60,
+    includeSubDomains: true,
+    force: true
+  })
+);
+
+app.use(
+  morgan((tokens, req, res) => {
+    console.log(
+      JSON.stringify({
+        body: req.body,
+        query: req.query,
+        params: req.params,
+        url: tokens.url(req, res)
+      })
+    );
+    return [
+      `<pid : ${process.pid}> <${process.env.NODE_ENV}>`,
+      tokens.method(req, res),
+      tokens.url(req, res),
+      tokens.status(req, res),
+      tokens.res(req, res, 'content-length'),
+      '-',
+      tokens['response-time'](req, res),
+      'ms'
+    ].join(' ');
+  })
+);
+
+app.use('/old', express.static(path.join(process.env.OLD_LOGS_PATH)));
+app.use('/live', express.static(path.join(process.env.LIVE_LOGS_PATH)));
+app.use('/test', express.static(path.join(process.env.TEST_LOGS_PATH)));
+
+app.listen(process.env.PORT, () => {
+  // scheduler();
+  console.log('Express server listening on port ', process.env.PORT); // eslint-disable-line
 });

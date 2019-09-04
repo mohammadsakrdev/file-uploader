@@ -1,36 +1,53 @@
-exports.upload = (req, res, next) => {
-  console.log('Upload Called');
-  if (req.header('Upload-Auth') !== process.env.SECRET_KEY.toString()) {
-    console.log('Upload-Auth not correct');
-    return res
-      .status(400)
-      .send({ success: false, message: 'Un Authorized Access' });
-  }
-  console.log(req.files);
-  if (!req.files || Object.keys(req.files).length == 0) {
-    return res.status(400).send({
-      success: false,
-      message: 'No files were uploaded.'
-    });
-  }
-  const uploaded = [];
-  console.log('Authenticated and there are files');
+const { createWriteStream } = require('fs');
+const download = require('download');
+const path = require('path');
 
-  Object.keys(req.files).forEach(key => {
-    const file = req.files[key];
-    // Use the mv() method to place the file somewhere on your server
-    file.mv(`./upload/${file.name}`, err => {
-      if (err) {
-        return res
-          .status(500)
-          .send({ success: false, message: err, files: null });
+const { upload } = require('./utility/utility');
+
+exports.uploadToOld = (req, res, next) => {
+  upload(req, res, next, process.env.OLD_LOGS_PATH);
+};
+
+exports.uploadToLive = (req, res, next) => {
+  upload(req, res, next, process.LIVE_LOGS_PATH);
+};
+
+exports.uploadToTest = (req, res, next) => {
+  upload(req, res, next, process.env.TEST_LOGS_PATH);
+};
+
+exports.all = async (req, res, next) => {
+  try {
+    if (req.header('Upload-Auth') !== process.env.SECRET_KEY.toString()) {
+      console.log('Upload-Auth not correct');
+      return res
+        .status(400)
+        .send({ success: false, message: 'Un Authorized Access' });
+    }
+    const { old, live, test } = req.body;
+    console.log('old', old);
+    console.log('live', live);
+    console.log('test', test);
+    // await download('http://ipv4.download.thinkbroadband.com/5MB.zip').pipe(
+    //   createWriteStream('/home/lyticshub/Field_Logs/Test/down.zip')
+    // );
+    test.forEach(async file => {
+      try {
+        console.log('@Download Starting');
+        console.log(path.join(process.env.TEST_DOWNLOAD_API, file));
+        console.log(path.join(process.env.TEST_LOGS_PATH, file));
+        await download(path.join(process.env.TEST_DOWNLOAD_API, file)).pipe(
+          createWriteStream(path.join(process.env.TEST_LOGS_PATH, file))
+        );
+        console.log('@Download Done');
+      } catch (error) {
+        console.log('@Download Error', error);
+        return;
       }
-      uploaded.push(file.name);
-      console.log(uploaded);
-      console.log(`File ${file.name} is uploaded successfully`);
     });
-  });
-  console.log('-------------');
-  console.log(uploaded);
-  return res.status(200).send({ success: true, message: 'Files Uploaded !' });
+    return res.status(200).send({ success: true, message: 'Success' });
+  } catch (err) {
+    console.log('@Error', { error });
+    return res.status(400).send({ success: false, message: 'Error happened' });
+  }
 };
